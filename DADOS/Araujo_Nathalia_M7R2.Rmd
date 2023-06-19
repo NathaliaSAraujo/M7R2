@@ -1,0 +1,258 @@
+---
+title: "Araujo_Nathalia_m7_r2"
+author: "Nathalia Araujo"
+date: "2023-06-17"
+output: html_document
+  prettydoc::html_pretty:
+    theme:hpstr
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+------------------------------------------------------------------------
+
+![](images/download.jpg)
+
+# PROYECTO DE CIENCIA DE DATOS REPRODUCIBLE {style="color:darkblue; font-family: Helvetica, sans-serif;"}
+
+#### Este trabajo tiene como objetivo simular el desarrollo de un proyecto de ciencia de datos reproducible. La base de datos pública elegida para ser objeto de este desafío fue "ESS9 -The European Social Survey", la novena ronda de la European Social Survey, publicada en 2021. La European Social Survey es extremadamente relevante para la investigación sobre el comportamiento de la población y el desarrollo del continente. , ya que sus múltiples rondas registran la realidad de esta muestra a lo largo de los años. {style="font-family: Lato, sans-serif;"}
+
+#### La base de datos original contiene una gran cantidad de variables y permite al usuario seleccionar a cuáles desea acceder. Se eligieron 30 variables para analizar. El universo del banco incluye 49.519 respuestas. {style="font-family: Lato, sans-serif;"}
+
+[Esta es la base de datos utilizada](https://docs.google.com/spreadsheets/d/1AREkM5sRwfN5ndLi5v3zvAr1UZpI1KUIg7ozT-4tej8/edit?usp=sharing), extraída gratuitamente del [sitio web oficial de ESS.](https://ess-search.nsd.no/en/study/bdc7c350-1029-4cb3-9d5e-53f668b8fa74)\
+
+-   La Encuesta social europea recopila una gran cantidad de datos sobre el comportamiento y la distribución demográfica de los europeos y proporciona información importante para apoyar el desarrollo de la investigación y la acción gubernamental.
+
+-   Con el fin de profundizar en el análisis posibilitado por la recopilación de datos de ESS, este proyecto tiene como objetivo descubrir si existe una relación entre los comportamientos relacionados con el uso de Internet, la religiosidad, la confianza social y los valores humanos. Queremos saber cómo las cuestiones demográficas de género, edad, país donde se realizó la investigación y situación laboral influyen en el comportamiento del individuo, y si existen patrones relevantes entre estos aspectos.
+
+```{r}
+caminho_arquivo <- "~/Mestrado/Módulo 7/Dados/DADOS.csv"
+DADOS <- read.csv(caminho_arquivo)
+print(DADOS)
+```
+
+-   Eliminemos columnas innecesarias para nuestra tarea:
+
+```{r}
+colunas_para_excluir <- c('name', 'essround', 'edition', 'proddate', 'dweight', 'pspwght', 'pweight', 'anweight', 'prob', 'stratum', 'psu')
+
+DADOS <- DADOS[, -which(names(DADOS) %in% colunas_para_excluir)]
+
+print(DADOS)
+
+```
+
+-   En la base de datos, los valores nulos se representan con números, lo que puede perjudicar el análisis. Para manejar este problema, borremos los datos
+
+```{r}
+limpeza1 <- c('netusoft', 'emplrel', 'ipcrtiv', 'imprich', 'ipeqopt', 'ipshabt', 'impsafe', 'impdiff', 'ipfrule', 'ipudrst', 'ipmodst', 'ipgdtim', 'impfree', 'iphlppl', 'ipsuces', 'ipstrgv', 'ipadvnt', 'ipbhprp', 'iprspot', 'iplylfr', 'impenv', 'imptrad', 'impfun')
+
+DADOS[limpeza1] <- lapply(DADOS[limpeza1], function(x) {
+  x[x %in% c(7, 8, 9)] <- NA
+  x
+})
+
+print(DADOS)
+```
+
+```{r}
+limpeza2 <- c('ppltrst', 'pplfair', 'pplhlp', 'rlgdgr')
+DADOS[limpeza2] <- lapply(DADOS[limpeza2], function(x) {
+  x[x %in% c(77, 88, 99)] <- NA
+  x
+})
+
+print(DADOS)
+
+```
+
+```{r}
+DADOS$agea[DADOS$agea == 999] <- NA
+print(DADOS)
+
+```
+
+-   Con los datos limpios, podemos empezar a visualizarlos.
+
+```{r}
+library(flexdashboard)
+library(dplyr)
+
+summary(DADOS)
+```
+
+-   Los participantes en la recolección de datos tienen sus edades distribuidas de la siguiente manera:
+
+```{r}
+
+barplot(table(DADOS$agea), main = "Edad de los encuestados")
+
+```
+
+-   Los participantes en la recopilación de datos se distribuyen por género de la siguiente manera:
+
+```{r}
+contagem_genero <- table(DADOS$gndr)
+barplot(contagem_genero, xlab = "Gênero", ylab = "Contagem", main = "Distribución de Género",
+        names.arg = c("Hombre", "Mujer"), col = c("blue", "pink"))
+legend("topright", legend = c("Hombre", "Mujer"), fill = c("blue", "pink"))
+
+
+```
+
+```{r}
+# Criar grupos de faixas etárias
+faixas_etarias <- cut(DADOS$agea, breaks = c(15, 35, 55, 75, 90),
+                      labels = c("15-34", "35-54", "55-74", "75-90"), include.lowest = TRUE)
+
+# Definir cores para cada faixa etária
+cores <- c("#FF0000", "#00FF00", "#0000FF", "#FF00FF")
+
+# Gráfico de dispersão com cores por faixa etária
+plot(DADOS$agea, DADOS$netusoft, col = cores[faixas_etarias], 
+     xlab = "Edad", ylab = "Frecuencia de uso de Internet", main = "Gráfico de dispersión")
+
+```
+
+-   La frecuencia de uso de internet es más intensa para las personas de hasta 74 años, como se muestra en el siguiente gráfico:
+
+```{r}
+contagem_faixas_etarias <- table(faixas_etarias)
+barplot(contagem_faixas_etarias, col = cores, 
+        xlab = "Edad (años)", ylab = "Uso de Internet", main = "Frequência de Uso de Internet x Edad")
+
+```
+
+-   Para estudiar las relaciones entre las variables planteadas en la encuesta, tenemos la siguiente matriz de correlación:
+
+```{r}
+# Selecionar apenas as colunas numéricas do dataframe
+DADOS_numeric <- DADOS[, sapply(DADOS, is.numeric)]
+
+# Remover as linhas com valores ausentes
+DADOS_sem_NA <- na.omit(DADOS_numeric)
+
+# Calcular a matriz de correlação para o dataframe sem NA
+matriz_correlacao <- cor(DADOS_sem_NA)
+
+# Exibir a matriz de correlação
+print(matriz_correlacao)
+
+```
+
+-   La correlación demuestra:
+
+    -   Existe una correlación negativa moderada entre 'impdiff' e 'ipfrule' (-0,376), lo que muestra la tendencia de las personas conservadoras a dar importancia a las normas y reglas, incluso cuando no hay supervisión.
+
+    -   La variable 'impfree' tiene una correlación positiva moderada con impdiff (0,309) y 'impfun' (0,281), lo que sugiere que las personas que valoran la libertad también tienden a valorar la diversidad y el entretenimiento.
+
+    -   Hay una correlación positiva moderada entre impfree e impsafe (0.221), lo que indica que las personas que valoran la libertad tienden a estar menos preocupadas por la seguridad.
+
+```{r fig.height=10, fig.width=18}
+
+# Plotar o heatmap da matriz de correlação com o mapa de cores "RdYlBu"
+heatmap_plot <- ggplot(data = reshape2::melt(matriz_correlacao), aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "#D7191C", mid = "#FFFFBF", high = "#2C7BB6", 
+                      midpoint = 0, limits = c(-1, 1), name = "Correlação",
+                      na.value = "gray", guide = "colorbar") +
+  theme_minimal() +
+  labs(title = "Heatmap Matrix de Correlación")
+
+# Exibir o heatmap
+print(heatmap_plot)
+```
+
+```{r}
+library(knitr)
+library(kableExtra)
+
+descritiva <- summary(DADOS)
+
+descritiva_df <- as.data.frame(descritiva)
+
+tabela_formatada <- kable(descritiva_df, format = "html", align = "c", caption = "Tabla Descriptiva")
+
+tabela_final <- tabela_formatada %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+tabela_final
+```
+
+```{r}
+library(shiny)
+library(ggplot2)
+library(reshape2)
+library(knitr)
+library(kableExtra)
+
+ui <- fluidPage(
+  # Título do dashboard
+  titlePanel("Comportamientos relacionados con el uso de internet, la religiosidad, la confianza social y los valores humanos en Europa"),
+  
+  # Layout do dashboard
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("variavel", "Variável:", choices = c("Matrix de Correlación", "Tabla Descriptiva", "Frequência de Uso de Internet x Edad", "Edad de los encuestados", "Distribución de Género"))
+    ),
+    
+    # Corpo do dashboard
+    mainPanel(
+      # Adicione os elementos do corpo do dashboard aqui
+      plotOutput("grafico")
+    )
+  )
+)
+
+# Definir o servidor
+server <- function(input, output) {
+  # Lógica do servidor
+  
+  output$grafico <- renderPlot({
+    # Verificar o input selecionado
+    if (input$variavel == "Matrix de Correlación") {
+      heatmap_plot <- ggplot(data = reshape2::melt(matriz_correlacao), aes(x = Var1, y = Var2, fill = value)) +
+        geom_tile() +
+        scale_fill_gradient2(low = "#D7191C", mid = "#FFFFBF", high = "#2C7BB6", 
+                            midpoint = 0, limits = c(-1, 1), name = "Correlación",
+                            na.value = "gray", guide = "colorbar") +
+        theme_minimal() +
+        labs(title = "Heatmap Matrix de Correlación")
+      
+      # Renderizar o gráfico
+      print(heatmap_plot)
+      
+    } else if (input$variavel == "Tabla Descriptiva") {
+      descritiva <- summary(DADOS)
+      descritiva_df <- as.data.frame(descritiva)
+      tabela_formatada <- kable(descritiva_df, format = "html", align = "c", caption = "Tabla Descriptiva")
+      tabela_final <- tabela_formatada %>%
+        kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+      
+      # Renderizar a tabela
+      print(tabela_final)
+      
+    } else if (input$variavel == "Frequência de Uso de Internet x Edad") {
+      contagem_faixas_etarias <- table(faixas_etarias)
+      barplot(contagem_faixas_etarias, col = cores, 
+              xlab = "Edad (años)", ylab = "Uso de Internet", main = "Frequência de Uso de Internet x Edad")
+      
+    } else if (input$variavel == "Edad de los encuestados") {
+      barplot(table(DADOS$agea), main = "Edad de los encuestados")
+      
+    } else if (input$variavel == "Distribución de Género") {
+      contagem_genero <- table(DADOS$gndr)
+      barplot(contagem_genero, xlab = "Gênero", ylab = "Contagem", main = "Distribución de Género",
+              names.arg = c("Hombre", "Mujer"), col = c("blue", "pink"))
+      legend("topright", legend = c("Hombre", "Mujer"), fill = c("blue", "pink"))
+    }
+  })
+}
+
+# Executar o aplicativo shiny
+shinyApp(ui = ui, server = server)
+
+
+```
