@@ -28,7 +28,7 @@ knitr::opts_chunk$set(echo = TRUE)
 -   Con el fin de profundizar en el análisis posibilitado por la recopilación de datos de ESS, este proyecto tiene como objetivo descubrir si existe una relación entre los comportamientos relacionados con el uso de Internet, la religiosidad, la confianza social y los valores humanos. Queremos saber cómo las cuestiones demográficas de género, edad, país donde se realizó la investigación y situación laboral influyen en el comportamiento del individuo, y si existen patrones relevantes entre estos aspectos.
 
 ```{r}
-caminho_arquivo <- "~/Mestrado/Módulo 7/Dados/DADOS.csv"
+caminho_arquivo <- "DADOS.csv"
 DADOS <- read.csv(caminho_arquivo)
 print(DADOS)
 ```
